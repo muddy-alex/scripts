@@ -1,0 +1,68 @@
+#!/bin/bash
+
+CWD=$(dirname "$0")
+
+. "$CWD/helpers/asana.sh"
+. "$CWD/helpers/git.sh"
+. "$CWD/helpers/log.sh"
+. "$CWD/helpers/dotenv.sh"
+
+dotenv ".env"
+
+dry_run=false
+
+if [ "$2" = "--dry-run" ]
+then
+  dry_run=true
+fi
+
+exit_if_not_main
+
+# Exit if not clean and not dry run
+if [ $dry_run == false ]
+then
+  exit_if_not_clean_work_tree
+fi
+
+
+info "Update main"
+git pull
+clear_previous_line
+
+task_id=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+
+info "Finding task [id: $task_id]"
+task_gid=$(find_task_gid_by_text "$workspace_gid" "$task_id" "$asana_api_key")
+clear_previous_line
+
+info "Fetching details: [gid: $task_gid]"
+task=$(get_task_by_gid "$task_gid" "$asana_api_key")
+
+task_name=$(echo "$task" | jq -r '.name | ascii_downcase' | sed 's/[^a-zA-Z0-9]/-/g' | cut -c 9- | head -c 50)
+task_type=$(echo "$task" | jq -r ".custom_fields[] | select(.gid | contains(\"$task_type_custom_field_gid\")) | .display_value | ascii_downcase")
+clear_previous_line
+
+if [ -z "$task_type" ]
+then
+  task_type="feat"
+fi
+
+branch_name="$task_type/$task_id-$task_name"
+
+if [ $dry_run == true ]
+then
+  info "Dry run"
+  info "Create branch [branch_name: $branch_name]"
+  exit 0
+fi
+
+if [ `git rev-parse --verify "$branch_name" 2>/dev/null` ]
+then
+    info "Branch exists, checking out [branch_name: $branch_name]"
+    git checkout "$branch_name"
+    clear_previous_line
+else
+  info "Creating branch [branch_name: $branch_name]"
+  git checkout -b "$branch_name"
+  clear_previous_line
+fi
