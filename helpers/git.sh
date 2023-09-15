@@ -1,3 +1,7 @@
+CWD=$(dirname "$0")
+
+. "$CWD/helpers/log.sh"
+
 function get_branch_name {
     branch_name="$(git symbolic-ref HEAD 2>/dev/null)" ||
     branch_name="(unnamed branch)"     # detached HEAD

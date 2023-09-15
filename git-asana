@@ -7,7 +7,7 @@ CWD=$(dirname "$0")
 . "$CWD/helpers/log.sh"
 . "$CWD/helpers/dotenv.sh"
 
-dotenv ".env"
+dotenv "$CWD/.env"
 
 dry_run=false
 
